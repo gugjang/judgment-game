@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>판단의 신</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:#fff;
+  font-family:Pretendard, Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+.container{
+  width:100%;
+  max-width:420px;
+  background:#1c1c1c;
+  padding:24px;
+  border-radius:18px;
+}
+h1,h2{text-align:center}
+.bigScore{
+  font-size:72px;
+  text-align:center;
+  margin:10px 0;
+}
+.comment{
+  text-align:center;
+  font-size:20px;
+  margin-bottom:20px;
+}
+button{
+  width:100%;
+  padding:16px;
+  margin-top:12px;
+  border:none;
+  border-radius:14px;
+  font-size:18px;
+  background:#2a2a2a;
+  color:#fff;
+}
+button:hover{background:#333}
+.hidden{display:none}
+.bar{
+  height:6px;
+  background:#333;
+  border-radius:4px;
+  overflow:hidden;
+  margin-top:16px;
+}
+.fill{
+  height:100%;
+  width:0%;
+  background:#ff5555;
+}
+.rule{
+  font-size:22px;
+  text-align:center;
+  margin-bottom:14px;
+}
+.noticeBig{
+  font-size:48px;
+  text-align:center;
+}
+.noticeText{
+  text-align:center;
+  font-size:18px;
+  margin:12px 0;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div id="start">
+  <h1>판단의 신</h1>
+  <button onclick="startGame()">시작하기</button>
+</div>
+
+<div id="notice" class="hidden">
+  <div class="noticeBig">ROUND 6</div>
+  <div class="noticeText">
+    제한 시간이 <b>3초</b>로 줄어듭니다<br>
+    규칙이 바뀝니다<br><br>
+    👉 <b>가운데 숫자를 고르시오</b>
+  </div>
+  <button onclick="continueGame()">계속하기</button>
+</div>
+
+<div id="game" class="hidden">
+  <h2>ROUND <span id="round">1</span></h2>
+  <div class="rule" id="ruleText"></div>
+  <div id="choices"></div>
+  <div class="bar"><div class="fill" id="gameBar"></div></div>
+</div>
+
+<div id="end" class="hidden">
+  <div class="bigScore"><span id="finalScore"></span>점</div>
+  <div class="comment" id="comment"></div>
+  <button onclick="location.reload()">다시 도전</button>
+</div>
+
+</div>
+
+<script>
+let round=1;
+let rule=0;
+let timeLimit=5;
+let gameTimer;
+let noticeShown=false;
+
+/* START */
+function startGame(){
+  start.classList.add("hidden");
+  game.classList.remove("hidden");
+  ruleText.textContent="가장 큰 수를 고르시오";
+  nextRound();
+}
+
+function nextRound(){
+  roundEl.textContent=round;
+
+  if(round===6 && !noticeShown){
+    noticeShown=true;
+    game.classList.add("hidden");
+    notice.classList.remove("hidden");
+    timeLimit=3;
+    rule=2;
+    return;
+  }
+
+  choices.innerHTML="";
+  const nums=[r(),r(),r()];
+  nums.forEach(n=>{
+    const b=document.createElement("button");
+    b.textContent=n;
+    b.onclick=()=>check(n,nums);
+    choices.appendChild(b);
+  });
+
+  startTimer();
+}
+
+function continueGame(){
+  notice.classList.add("hidden");
+  game.classList.remove("hidden");
+  nextRound();
+}
+
+function startTimer(){
+  let start=Date.now();
+  gameBar.style.width="0%";
+  clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    const p=(Date.now()-start)/(timeLimit*1000)*100;
+    gameBar.style.width=p+"%";
+    if(p>=100) endGame();
+  },50);
+}
+
+function check(n,arr){
+  clearInterval(gameTimer);
+  let correct;
+  if(rule===0) correct=Math.max(...arr);
+  if(rule===2){
+    const s=[...arr].sort((a,b)=>a-b);
+    correct=s[1];
+  }
+  n===correct?(round++,nextRound()):endGame();
+}
+
+function endGame(){
+  game.classList.add("hidden");
+  endDiv.classList.remove("hidden");
+  finalScore.textContent=round-1;
+
+  let msg="음… 아직 감을 못 잡았네요";
+  if(round>4) msg="오, 조금 하시네요?";
+  if(round>8) msg="이건 꽤 잘하는데요?";
+  if(round>13) msg="판단력 장인입니다";
+  if(round>20) msg="당신은 판단의 신입니다";
+
+  comment.textContent=msg;
+}
+
+function r(){return Math.floor(Math.random()*90)+10;}
+
+/* DOM */
+const start=document.getElementById("start");
+const game=document.getElementById("game");
+const notice=document.getElementById("notice");
+const choices=document.getElementById("choices");
+const roundEl=document.getElementById("round");
+const ruleText=document.getElementById("ruleText");
+const gameBar=document.getElementById("gameBar");
+const endDiv=document.getElementById("end");
+const finalScore=document.getElementById("finalScore");
+const comment=document.getElementById("comment");
+</script>
+</body>
+</html>
