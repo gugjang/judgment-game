@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>판단의 신</title>
+<style>
+body{
+ margin:0;
+ font-family:Pretendard,Arial,sans-serif;
+ background:linear-gradient(135deg,#fdfbfb,#ebedee);
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ height:100vh;
+}
+.container{
+ width:100%;
+ max-width:420px;
+ padding:20px;
+ text-align:center;
+}
+h1{font-size:2.3rem}
+.rule{font-size:1.15rem;font-weight:600;margin:10px 0}
+.numbers{display:flex;justify-content:center;gap:10px;margin:20px 0}
+.num-btn{
+ font-size:1.5rem;
+ padding:16px 18px;
+ border:none;
+ border-radius:12px;
+ background:#fff;
+ box-shadow:0 4px 10px rgba(0,0,0,.1);
+ cursor:pointer;
+}
+.timer-bar{
+ height:8px;
+ background:#ddd;
+ border-radius:5px;
+ overflow:hidden;
+}
+.timer-fill{
+ height:100%;
+ background:#ff5a5a;
+ width:100%;
+}
+.example{font-size:.9rem;color:#555;margin-top:8px}
+.btn{
+ padding:14px 24px;
+ font-size:1.2rem;
+ border:none;
+ border-radius:12px;
+ background:#000;
+ color:#fff;
+ cursor:pointer;
+}
+.score{font-size:3rem;font-weight:800}
+</style>
+</head>
+<body>
+
+<div class="container" id="app"></div>
+
+<script>
+let score=0,timer;
+const TIME=3000;
+
+/* 🔹 규칙 정의 */
+const easyRules=[
+ {
+  text:"가장 큰 숫자를 고르시오",
+  example:"예) 12 / 25 / 18 → 25",
+  solve:n=>Math.max(...n)
+ },
+ {
+  text:"가장 작은 숫자를 고르시오",
+  example:"예) 12 / 25 / 18 → 12",
+  solve:n=>Math.min(...n)
+ },
+ {
+  text:"중간값을 고르시오",
+  example:"예) 12 / 18 / 25 → 18",
+  solve:n=>n.sort((a,b)=>a-b)[1]
+ }
+];
+
+const hardRules=[
+ {
+  text:"다른 숫자들과 가장 차이가 큰 숫자를 고르시오",
+  example:"예) 18 / 19 / 25 → 25",
+  solve:n=>n.reduce((a,b)=>dist(b,n)>dist(a,n)?b:a)
+ },
+ {
+  text:"혼자만 자릿수가 다른 숫자를 고르시오",
+  example:"예) 21 / 34 / 105 → 105",
+  solve:n=>n.find(x=>n.filter(y=>String(y).length===String(x).length).length===1)
+ },
+ {
+  text:"자리수의 곱이 가장 작은 숫자를 고르시오",
+  example:"예) 23(6), 41(4), 35(15) → 41",
+  solve:n=>n.reduce((a,b)=>mul(b)<mul(a)?b:a)
+ },
+ {
+  text:"숫자들의 패턴을 깨는 숫자를 고르시오",
+  example:"예) 10 / 20 / 35 → 35",
+  solve:n=>n[n.length-1]
+ },
+ {
+  text:"보기 중 가장 다른 숫자를 고르시오",
+  example:"예) 12 / 14 / 16 / 31 → 31",
+  solve:n=>n[n.length-1],
+  four:true
+ }
+];
+
+function mul(n){return String(n).split("").reduce((a,b)=>a*b,1)}
+function dist(x,a){return a.reduce((s,v)=>s+Math.abs(x-v),0)}
+
+function start(){
+ document.getElementById("app").innerHTML=`
+ <h1>판단의 신</h1>
+ <p>처음엔 쉽습니다.<br>곧 아닐 겁니다.</p>
+ <button class="btn" onclick="startGame()">시작하기</button>`;
+}
+
+function startGame(){score=0;nextRound()}
+
+function nextRound(){
+ score++;
+ let ruleset = score<10 ? easyRules : easyRules.concat(hardRules);
+ let rule = ruleset[Math.floor(Math.random()*ruleset.length)];
+ let count = rule.four ? 4 : 3;
+ let nums=[];
+ while(nums.length<count){
+  let n=Math.floor(Math.random()*90)+10;
+  if(!nums.includes(n)) nums.push(n);
+ }
+ let ans=rule.solve([...nums]);
+
+ document.getElementById("app").innerHTML=`
+ <div class="rule">ROUND ${score}</div>
+ <div class="rule">${rule.text}</div>
+ <div class="numbers">
+ ${nums.map(n=>`<button class="num-btn" onclick="pick(${n},${ans})">${n}</button>`).join("")}
+ </div>
+ <div class="timer-bar"><div class="timer-fill" id="timer"></div></div>
+ <div class="example">${rule.example}</div>`;
+
+ let bar=document.getElementById("timer");
+ bar.style.transition="width 3s linear";
+ setTimeout(()=>bar.style.width="0%",10);
+ timer=setTimeout(endGame,TIME);
+}
+
+function pick(n,a){
+ clearTimeout(timer);
+ n===a?nextRound():endGame();
+}
+
+function endGame(){
+ clearTimeout(timer);
+ let msg=score<6?"연습이 필요합니다":score<11?"판단력이 보입니다":score<16?"꽤 하시네요":"당신은 판단의 신";
+ document.getElementById("app").innerHTML=`
+ <h1>게임 종료</h1>
+ <div class="score">${score-1}점</div>
+ <p>${msg}</p>
+ <button class="btn" onclick="start()">처음으로</button>`;
+}
+
+start();
+</script>
+
+</body>
+</html>
