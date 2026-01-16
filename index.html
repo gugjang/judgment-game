@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>판단의 신</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:#fff;
+  font-family:Pretendard, Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+.container{
+  width:100%;
+  max-width:420px;
+  background:#1c1c1c;
+  padding:24px;
+  border-radius:18px;
+}
+h1,h2{text-align:center}
+.bigScore{
+  font-size:72px;
+  text-align:center;
+  margin:20px 0;
+}
+button{
+  width:100%;
+  padding:16px;
+  margin-top:12px;
+  border:none;
+  border-radius:14px;
+  font-size:18px;
+  background:#2a2a2a;
+  color:#fff;
+}
+button:hover{background:#333}
+.hidden{display:none}
+.bar{
+  height:6px;
+  background:#333;
+  border-radius:4px;
+  overflow:hidden;
+  margin-top:16px;
+}
+.fill{
+  height:100%;
+  width:0%;
+  background:#ff5555;
+}
+.rule{
+  font-size:22px;
+  text-align:center;
+  margin-bottom:14px;
+}
+.char{
+  font-size:60px;
+  text-align:center;
+}
+.notice{
+  text-align:center;
+  font-size:18px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div id="start">
+  <h1>판단의 신</h1>
+  <button onclick="startSurvey()">시작하기</button>
+</div>
+
+<div id="survey" class="hidden">
+  <h2 id="q"></h2>
+  <div id="a"></div>
+  <div class="bar"><div class="fill" id="surveyBar"></div></div>
+</div>
+
+<div id="result" class="hidden">
+  <h2 id="typeName"></h2>
+  <div class="char" id="char"></div>
+  <p id="desc"></p>
+  <button onclick="startGame()">게임 시작</button>
+</div>
+
+<div id="notice" class="hidden">
+  <div class="notice" id="noticeText"></div>
+  <button onclick="continueGame()">계속</button>
+</div>
+
+<div id="game" class="hidden">
+  <h2>ROUND <span id="round">1</span></h2>
+  <div class="rule" id="ruleText"></div>
+  <div id="choices"></div>
+  <div class="bar"><div class="fill" id="gameBar"></div></div>
+</div>
+
+<div id="end" class="hidden">
+  <div class="bigScore" id="finalScore"></div>
+  <p id="comment"></p>
+  <button onclick="location.reload()">다시 도전</button>
+</div>
+
+</div>
+
+<script>
+/* ---------- SURVEY ---------- */
+const survey=[
+["결정할 때?",["바로","생각","미룸"]],
+["실패하면?",["재도전","분석","포기"]],
+["압박 상황?",["무시","인지","불안"]],
+["선택 기준?",["직감","논리","회피"]],
+["게임 성향?",["즉시","패턴","망설임"]],
+["판단 속도?",["빠름","보통","느림"]],
+["결정을?",["믿음","검증","피함"]]
+];
+
+let sIdx=0, sScore=[0,0,0];
+let surveyStart, surveyTimer;
+
+/* ---------- START ---------- */
+function startSurvey(){
+  start.classList.add("hidden");
+  surveyDiv.classList.remove("hidden");
+  surveyStart=Date.now();
+  surveyTimer=setInterval(updateSurveyBar,100);
+  showQ();
+}
+
+function updateSurveyBar(){
+  const p=(Date.now()-surveyStart)/30000*100;
+  surveyBar.style.width=p+"%";
+  if(p>=100){
+    clearInterval(surveyTimer);
+    showResult(true);
+  }
+}
+
+function showQ(){
+  q.textContent=`Q${sIdx+1}. ${survey[sIdx][0]}`;
+  a.innerHTML="";
+  survey[sIdx][1].forEach((t,i)=>{
+    const b=document.createElement("button");
+    b.textContent=t;
+    b.onclick=()=>{
+      sScore[i]++;
+      sIdx++;
+      sIdx<survey.length?showQ():showResult(false);
+    };
+    a.appendChild(b);
+  });
+}
+
+function showResult(timeout){
+  clearInterval(surveyTimer);
+  surveyDiv.classList.add("hidden");
+
+  let type;
+  if(timeout) type="불안형";
+  else if(sScore.every(v=>v<4)) type="유동형";
+  else if(Math.max(...sScore)===sScore[0]) type="직감형";
+  else if(Math.max(...sScore)===sScore[1]) type="분석형";
+  else type="회피형";
+
+  const map={
+    "직감형":["직감형","🔺","빠른 결단을 믿는다"],
+    "분석형":["분석형","🔷","규칙을 파악한다"],
+    "회피형":["회피형","⚫","결정을 미룬다"],
+    "유동형":["유동형","🟢","상황에 흔들린다"],
+    "불안형":["불안형","🟣","시간 압박에 약하다"]
+  };
+
+  typeName.textContent=map[type][0];
+  char.textContent=map[type][1];
+  desc.textContent=map[type][2];
+  result.classList.remove("hidden");
+}
+
+/* ---------- GAME ---------- */
+let round=1;
+let rule=0;
+let timeLimit=5;
+let gameTimer;
+
+function startGame(){
+  result.classList.add("hidden");
+  game.classList.remove("hidden");
+  ruleText.textContent="가장 큰 수를 고르시오";
+  nextRound();
+}
+
+function nextRound(){
+  roundEl.textContent=round;
+
+  if(round===6){
+    showNotice("이제부터 제한 시간이 3초로 줄어듭니다<br>규칙: 가운데 숫자를 고르시오");
+    timeLimit=3;
+    rule=2;
+    return;
+  }
+
+  choices.innerHTML="";
+  const nums=[r(),r(),r()];
+  nums.forEach(n=>{
+    const b=document.createElement("button");
+    b.textContent=n;
+    b.onclick=()=>check(n,nums);
+    choices.appendChild(b);
+  });
+
+  startGameTimer();
+}
+
+function showNotice(text){
+  game.classList.add("hidden");
+  noticeText.innerHTML=text;
+  notice.classList.remove("hidden");
+}
+
+function continueGame(){
+  notice.classList.add("hidden");
+  game.classList.remove("hidden");
+  nextRound();
+}
+
+function startGameTimer(){
+  let start=Date.now();
+  gameBar.style.width="0%";
+  clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    const p=(Date.now()-start)/(timeLimit*1000)*100;
+    gameBar.style.width=p+"%";
+    if(p>=100){endGame();}
+  },50);
+}
+
+function check(n,arr){
+  clearInterval(gameTimer);
+  let correct;
+  if(rule===0) correct=Math.max(...arr);
+  if(rule===2){
+    const s=[...arr].sort((a,b)=>a-b);
+    correct=s[1];
+  }
+  n===correct?(round++,nextRound()):endGame();
+}
+
+function endGame(){
+  game.classList.add("hidden");
+  endDiv.classList.remove("hidden");
+  finalScore.textContent=round-1;
+
+  let msg="음… 아직 감을 못 잡았네요";
+  if(round>4) msg="오, 조금 하시네요?";
+  if(round>8) msg="이건 꽤 잘하는데요?";
+  if(round>13) msg="판단력 장인입니다";
+  if(round>20) msg="당신은 판단의 신입니다";
+
+  comment.textContent=msg;
+}
+
+function r(){return Math.floor(Math.random()*90)+10;}
+
+/* ---------- DOM ---------- */
+const start=document.getElementById("start");
+const surveyDiv=document.getElementById("survey");
+const q=document.getElementById("q");
+const a=document.getElementById("a");
+const surveyBar=document.getElementById("surveyBar");
+const result=document.getElementById("result");
+const typeName=document.getElementById("typeName");
+const char=document.getElementById("char");
+const desc=document.getElementById("desc");
+const notice=document.getElementById("notice");
+const noticeText=document.getElementById("noticeText");
+const game=document.getElementById("game");
+const choices=document.getElementById("choices");
+const roundEl=document.getElementById("round");
+const ruleText=document.getElementById("ruleText");
+const gameBar=document.getElementById("gameBar");
+const endDiv=document.getElementById("end");
+const finalScore=document.getElementById("finalScore");
+const comment=document.getElementById("comment");
+</script>
+</body>
+</html>
