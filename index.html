@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Check Your Meme Fortune</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", Arial, sans-serif;
+      background: linear-gradient(135deg, #fdfbfb, #ebedee);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 24px;
+    }
+    .question {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+    .answers button {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 12px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: #f1f3f5;
+    }
+    .answers button:hover {
+      background: #e9ecef;
+    }
+    .result {
+      text-align: center;
+    }
+    .shape {
+      width: 120px;
+      height: 120px;
+      margin: 20px auto;
+    }
+    .circle {
+      border-radius: 50%;
+      background: #ff6b6b;
+    }
+    .square {
+      background: #4dabf7;
+    }
+    .triangle {
+      width: 0;
+      height: 0;
+      border-left: 60px solid transparent;
+      border-right: 60px solid transparent;
+      border-bottom: 120px solid #51cf66;
+      background: none;
+    }
+    .diamond {
+      width: 100px;
+      height: 100px;
+      background: #ffd43b;
+      transform: rotate(45deg);
+      margin-top: 40px;
+    }
+    .restart {
+      margin-top: 20px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      background: #333;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1>밈 운세</h1>
+    <div class="subtitle">7개의 질문으로 당신의 성향을 분석합니다</div>
+
+    <div id="quiz">
+      <div class="question" id="question"></div>
+      <div class="answers" id="answers"></div>
+    </div>
+
+    <div id="result" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        q: "Q1. 갑자기 2시간이 비었다",
+        a: [
+          { text: "바로 할 일 하나 정해서 시작", type: "A" },
+          { text: "뭐 할지 정리부터 한다", type: "B" },
+          { text: "고민하다가 시간 다 보냄", type: "C" }
+        ]
+      },
+      {
+        q: "Q2. 선택지가 여러 개 있다면",
+        a: [
+          { text: "일단 하나 고른다", type: "A" },
+          { text: "장단점 비교 후 선택", type: "B" },
+          { text: "계속 바뀌어서 못 고름", type: "C" }
+        ]
+      },
+      {
+        q: "Q3. 제한 시간이 있는 상황",
+        a: [
+          { text: "시간 거의 안 봄", type: "A" },
+          { text: "중간중간 확인", type: "B" },
+          { text: "시간 때문에 더 못 고름", type: "C" }
+        ]
+      },
+      {
+        q: "Q4. 새로운 게임을 시작할 때",
+        a: [
+          { text: "설명 안 보고 바로 시작", type: "A" },
+          { text: "튜토리얼은 읽는다", type: "B" },
+          { text: "시작 버튼 누르기까지 오래", type: "C" }
+        ]
+      },
+      {
+        q: "Q5. 한 번 실패했다",
+        a: [
+          { text: "바로 다시 한다", type: "A" },
+          { text: "원인을 생각한다", type: "B" },
+          { text: "하기 싫어진다", type: "C" }
+        ]
+      },
+      {
+        q: "Q6. 빨리 결정하라고 하면",
+        a: [
+          { text: "오히려 더 빨라짐", type: "A" },
+          { text: "압박 있지만 결정", type: "B" },
+          { text: "머리가 하얘짐", type: "C" }
+        ]
+      },
+      {
+        q: "Q7. 지금 이 설문을 하면서",
+        a: [
+          { text: "빨리 끝내고 싶다", type: "A" },
+          { text: "차근차근 읽고 있다", type: "B" },
+          { text: "은근히 선택이 어렵다", type: "C" }
+        ]
+      }
+    ];
+
+    let index = 0;
+    let score = { A: 0, B: 0, C: 0 };
+
+    const questionEl = document.getElementById("question");
+    const answersEl = document.getElementById("answers");
+    const quizEl = document.getElementById("quiz");
+    const resultEl = document.getElementById("result");
+
+    function showQuestion() {
+      const q = questions[index];
+      questionEl.textContent = q.q;
+      answersEl.innerHTML = "";
+      q.a.forEach(ans => {
+        const btn = document.createElement("button");
+        btn.textContent = ans.text;
+        btn.onclick = () => {
+          score[ans.type]++;
+          index++;
+          if (index < questions.length) {
+            showQuestion();
+          } else {
+            showResult();
+          }
+        };
+        answersEl.appendChild(btn);
+      });
+    }
+
+    function showResult() {
+      quizEl.style.display = "none";
+      resultEl.style.display = "block";
+
+      let type = "유동형";
+      let shape = "diamond";
+      let desc = "상황에 따라 선택이 달라지는 타입입니다.";
+
+      if (score.A >= 4) {
+        type = "직진형";
+        shape = "circle";
+        desc = "망설임보다 행동이 빠릅니다. 속도가 무기입니다.";
+      } else if (score.B >= 4) {
+        type = "분석형";
+        shape = "square";
+        desc = "생각하고 판단하는 과정이 중요합니다.";
+      } else if (score.C >= 4) {
+        type = "불안형";
+        shape = "triangle";
+        desc = "결정 전 고민이 많고 신중한 성향입니다.";
+      }
+
+      resultEl.innerHTML = `
+        <h2>${type}</h2>
+        <div class="shape ${shape}"></div>
+        <p>${desc}</p>
+        <button class="restart" onclick="location.reload()">다시 하기</button>
+      `;
+    }
+
+    showQuestion();
+  </script>
+</body>
+</html>
