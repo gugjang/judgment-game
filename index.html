@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>판단의 신</title>
+<style>
+body {
+    margin:0;
+    font-family:Pretendard, Arial, sans-serif;
+    background:linear-gradient(135deg,#fdfbfb,#ebedee);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+.container {
+    width:100%;
+    max-width:420px;
+    padding:20px;
+    text-align:center;
+}
+h1 { font-size:2.3rem; }
+.question { font-size:1.2rem; margin:20px 0; }
+.answer {
+    display:block;
+    padding:14px;
+    margin:10px 0;
+    border-radius:12px;
+    background:#fff;
+    box-shadow:0 4px 10px rgba(0,0,0,.1);
+    cursor:pointer;
+}
+.timer-bar {
+    height:8px;
+    background:#ddd;
+    border-radius:5px;
+    overflow:hidden;
+    margin:15px 0;
+}
+.timer-fill {
+    height:100%;
+    background:#ff5a5a;
+    width:100%;
+}
+.shape {
+    width:120px;
+    height:120px;
+    margin:20px auto;
+}
+.circle { border-radius:50%; }
+.square {}
+.triangle {
+    width:0;
+    height:0;
+    border-left:60px solid transparent;
+    border-right:60px solid transparent;
+    border-bottom:120px solid;
+}
+.rule { font-size:1.15rem; font-weight:600; }
+.numbers { display:flex; justify-content:center; gap:10px; margin:20px 0; }
+.num-btn {
+    font-size:1.5rem;
+    padding:16px 18px;
+    border-radius:12px;
+    border:none;
+    background:#fff;
+    box-shadow:0 4px 10px rgba(0,0,0,.1);
+    cursor:pointer;
+}
+.example { font-size:.9rem; color:#555; }
+.btn {
+    padding:14px 24px;
+    font-size:1.2rem;
+    border:none;
+    border-radius:12px;
+    background:#000;
+    color:#fff;
+    cursor:pointer;
+}
+.score { font-size:3rem; font-weight:800; }
+</style>
+</head>
+<body>
+
+<div class="container" id="app"></div>
+
+<script>
+/* ---------------- 설문 ---------------- */
+const survey = [
+ "결정을 할 때 더 중요한 것은?",
+ "처음 보는 문제를 만나면?",
+ "시간 제한이 있으면?",
+ "실수했을 때 반응은?",
+ "선택할 때 기준은?",
+ "게임에서 중요한 건?",
+ "마지막으로 선택은?"
+];
+const answers = [
+ ["빠른 직감","논리적 판단","상황에 따라"],
+ ["일단 눌러본다","분석부터","망설인다"],
+ ["흥미롭다","괜찮다","불안하다"],
+ ["넘긴다","복기한다","계속 신경쓴다"],
+ ["느낌","정답","유연함"],
+ ["속도","정확성","자유도"],
+ ["지금","확실한","그때그때"]
+];
+
+let surveyIndex=0;
+let resultCount={A:0,B:0,C:0};
+let surveyTimer;
+
+/* ---------------- 게임 규칙 ---------------- */
+const TIME_LIMIT=3000;
+let score=0, timer;
+
+const rules=[
+{
+ text:"다른 숫자들과 가장 차이가 큰 숫자를 고르시오",
+ example:"예) 18 / 19 / 25 → 25",
+ solve:n=>n.reduce((a,b)=>dist(b,n)>dist(a,n)?b:a)
+},
+{
+ text:"혼자만 자릿수가 다른 숫자를 고르시오",
+ example:"예) 21 / 34 / 105 → 105",
+ solve:n=>n.find(x=>n.filter(y=>String(y).length===String(x).length).length===1)
+},
+{
+ text:"자리수의 곱이 가장 작은 숫자를 고르시오",
+ example:"예) 23(6), 41(4), 35(15) → 41",
+ solve:n=>n.reduce((a,b)=>mul(b)<mul(a)?b:a)
+},
+{
+ text:"숫자들의 패턴을 깨는 숫자를 고르시오",
+ example:"예) 10 / 20 / 35 → 35",
+ solve:n=>n[n.length-1]
+},
+{
+ text:"보기 중 가장 다른 숫자를 고르시오",
+ example:"예) 12 / 14 / 16 / 31 → 31",
+ solve:n=>n[n.length-1]
+}
+];
+
+function mul(n){return String(n).split("").reduce((a,b)=>a*b,1);}
+function dist(x,a){return a.reduce((s,v)=>s+Math.abs(x-v),0);}
+
+/* ---------------- 화면 ---------------- */
+function start(){
+ document.getElementById("app").innerHTML=`
+ <h1>판단의 신</h1>
+ <p>규칙은 변합니다.<br>판단만 남습니다.</p>
+ <button class="btn" onclick="startSurvey()">시작하기</button>`;
+}
+function startSurvey(){
+ surveyIndex=0;
+ resultCount={A:0,B:0,C:0};
+ nextSurvey();
+}
+function nextSurvey(){
+ if(surveyIndex>=7){ showResult(); return; }
+ clearTimeout(surveyTimer);
+ document.getElementById("app").innerHTML=`
+ <div class="question">${survey[surveyIndex]}</div>
+ ${answers[surveyIndex].map((t,i)=>`<div class="answer" onclick="choose('${['A','B','C'][i]}')">${t}</div>`).join("")}
+ <div class="timer-bar"><div class="timer-fill" id="timer"></div></div>`;
+ let bar=document.getElementById("timer");
+ bar.style.transition="width 30s linear";
+ setTimeout(()=>bar.style.width="0%",10);
+ surveyTimer=setTimeout(()=>{showResult(true)},30000);
+}
+function choose(t){
+ resultCount[t]++;
+ surveyIndex++;
+ nextSurvey();
+}
+function showResult(timeout=false){
+ clearTimeout(surveyTimer);
+ let type="유동형";
+ if(timeout) type="불안형";
+ else if(resultCount.A>resultCount.B&&resultCount.A>resultCount.C) type="직감형";
+ else if(resultCount.B>resultCount.A&&resultCount.B>resultCount.C) type="분석형";
+
+ const shapeHTML={
+ "직감형":`<div class="shape circle" style="background:#ff7675"></div>`,
+ "분석형":`<div class="shape square" style="background:#74b9ff"></div>`,
+ "유동형":`<div class="shape triangle" style="border-bottom-color:#55efc4"></div>`,
+ "불안형":`<div class="shape square" style="background:#636e72"></div>`
+ };
+
+ document.getElementById("app").innerHTML=`
+ <h1>${type}</h1>
+ ${shapeHTML[type]}
+ <p>${type==="불안형"?"시간 압박에 민감합니다":"당신의 판단 성향입니다"}</p>
+ <button class="btn" onclick="startGame()">게임 시작</button>`;
+}
+
+/* ---------------- 게임 ---------------- */
+function startGame(){ score=0; nextRound(); }
+function nextRound(){
+ score++;
+ const rule=rules[Math.floor(Math.random()*rules.length)];
+ const cnt=Math.random()<0.4?4:3;
+ let nums=[];
+ while(nums.length<cnt){
+  let n=Math.floor(Math.random()*90)+10;
+  if(!nums.includes(n)) nums.push(n);
+ }
+ const ans=rule.solve(nums)||nums[0];
+ document.getElementById("app").innerHTML=`
+ <div class="rule">${rule.text}</div>
+ <div class="numbers">
+ ${nums.map(n=>`<button class="num-btn" onclick="pick(${n},${ans})">${n}</button>`).join("")}
+ </div>
+ <div class="timer-bar"><div class="timer-fill" id="timer"></div></div>
+ <div class="example">${rule.example}</div>`;
+ let bar=document.getElementById("timer");
+ bar.style.transition="width 3s linear";
+ setTimeout(()=>bar.style.width="0%",10);
+ timer=setTimeout(endGame,3000);
+}
+function pick(n,a){
+ clearTimeout(timer);
+ if(n===a) nextRound();
+ else endGame();
+}
+function endGame(){
+ clearTimeout(timer);
+ let msg=score<6?"아직 감이 부족합니다":score<11?"판단력이 보입니다":score<16?"꽤 하시네요":"당신은 판단의 신";
+ document.getElementById("app").innerHTML=`
+ <h1>게임 종료</h1>
+ <div class="score">${score-1}점</div>
+ <p>${msg}</p>
+ <button class="btn" onclick="start()">처음으로</button>`;
+}
+
+start();
+</script>
+
+</body>
+</html>
