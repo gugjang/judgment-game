@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>판단의 신</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,#111,#222);
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+#app{
+  width:90%;
+  max-width:420px;
+  text-align:center;
+}
+button{
+  width:100%;
+  padding:14px;
+  margin:6px 0;
+  font-size:18px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+}
+.choice{background:#333;color:white;}
+.choice:hover{background:#555;}
+.timer{
+  height:6px;
+  background:#444;
+  border-radius:3px;
+  overflow:hidden;
+  margin:10px 0;
+}
+.timer-fill{
+  height:100%;
+  background:#4caf50;
+  width:100%;
+}
+.shape{
+  font-size:90px;
+}
+.small{opacity:.7;font-size:14px;}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+const app=document.getElementById("app");
+
+/* ---------- 설문 ---------- */
+const survey=[
+ {q:"결정을 내려야 할 때?", a:[
+  ["빠르게","판단"],["분석 후","신중"],["느낌대로","직감"],["안전하게","회피"]
+ ]},
+ {q:"시간이 부족하면?", a:[
+  ["밀어붙임","판단"],["더 집중","신중"],["감으로","직감"],["리스크 회피","회피"]
+ ]},
+ {q:"실수했을 때?", a:[
+  ["넘긴다","판단"],["원인 분석","신중"],["괜찮아","직감"],["조심","회피"]
+ ]},
+ {q:"새 규칙이 나오면?", a:[
+  ["바로 적응","판단"],["이해부터","신중"],["해보자","직감"],["피하고싶다","회피"]
+ ]},
+ {q:"게임 스타일은?", a:[
+  ["공격적","판단"],["계산적","신중"],["감각적","직감"],["안정적","회피"]
+ ]},
+ {q:"선택 기준은?", a:[
+  ["속도","판단"],["정확","신중"],["직감","직감"],["균형","회피"]
+ ]},
+ {q:"압박 상황에서?", a:[
+  ["결단","판단"],["침착","신중"],["감","직감"],["회피","회피"]
+ ]}
+];
+
+const types={
+ 판단:{shape:"▲",color:"#f44336",desc:"빠른 결단의 지배자",time:0.5},
+ 신중:{shape:"■",color:"#2196f3",desc:"분석의 수호자",shield:1},
+ 직감:{shape:"●",color:"#ff9800",desc:"감각의 화신",combo:true},
+ 회피:{shape:"◆",color:"#9c27b0",desc:"안정의 선택자",forgive:1},
+ 불안:{shape:"⬣",color:"#4caf50",desc:"압박 속 생존자",slow:true}
+};
+
+let sIndex=0;
+let scores={판단:0,신중:0,직감:0,회피:0};
+let surveyTimer;
+
+/* ---------- 설문 시작 ---------- */
+function startSurvey(){
+ sIndex=0;
+ scores={판단:0,신중:0,직감:0,회피:0};
+ renderSurvey();
+ startSurveyTimer();
+}
+
+function startSurveyTimer(){
+ let t=30;
+ surveyTimer=setTimeout(()=>{
+   showResult("불안");
+ },30000);
+}
+
+function renderSurvey(){
+ const s=survey[sIndex];
+ app.innerHTML=`
+ <h2>${s.q}</h2>
+ <div class="timer"><div class="timer-fill"></div></div>
+ ${s.a.map(x=>`<button class="choice" onclick="pick('${x[1]}')">${x[0]}</button>`).join("")}
+ `;
+}
+
+function pick(type){
+ scores[type]++;
+ sIndex++;
+ if(sIndex>=survey.length){
+   clearTimeout(surveyTimer);
+   const result=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+   showResult(result);
+ }else{
+   renderSurvey();
+ }
+}
+
+/* ---------- 결과 ---------- */
+function showResult(type){
+ const t=types[type];
+ app.innerHTML=`
+ <div class="shape" style="color:${t.color}">${t.shape}</div>
+ <h2>${type}형</h2>
+ <p>${t.desc}</p>
+ <button onclick="startGame('${type}')">게임 시작</button>
+ `;
+}
+
+/* ---------- 게임 ---------- */
+let round=1,score=0,timeLimit=3,character;
+
+function startGame(type){
+ character=types[type];
+ if(character.time) timeLimit+=character.time;
+ appGame();
+}
+
+function appGame(){
+ const nums=[];
+ while(nums.length<4){
+  const n=Math.floor(Math.random()*90)+10;
+  if(!nums.includes(n)) nums.push(n);
+ }
+ const rule=Math.floor(Math.random()*3);
+ let answer;
+ let text=["가장 큰 수","가장 작은 수","중간 수"][rule];
+ if(rule===0) answer=Math.max(...nums);
+ if(rule===1) answer=Math.min(...nums);
+ if(rule===2){
+  const s=[...nums].sort((a,b)=>a-b);
+  answer=s[1];
+ }
+ app.innerHTML=`
+ <h3>Round ${round}</h3>
+ <h2>${text}를 고르시오</h2>
+ <div class="timer"><div class="timer-fill" id="tf"></div></div>
+ ${nums.map(n=>`<button class="choice" onclick="choose(${n},${answer})">${n}</button>`).join("")}
+ `;
+ startRoundTimer();
+}
+
+function startRoundTimer(){
+ let t=timeLimit;
+ const tf=document.getElementById("tf");
+ const interval=setInterval(()=>{
+  t-=0.05;
+  tf.style.width=(t/timeLimit*100)+"%";
+  if(t<=0){
+   clearInterval(interval);
+   endGame();
+  }
+ },50);
+}
+
+function choose(n,a){
+ if(n===a){
+  score+=10;
+  round++;
+  appGame();
+ }else{
+  endGame();
+ }
+}
+
+function endGame(){
+ app.innerHTML=`
+ <h1>${score}점</h1>
+ <p>${score>80?"오… 좀 하시네요":"연습 더 하셔야겠네요"}</p>
+ <button onclick="startSurvey()">다시 하기</button>
+ `;
+}
+
+/* ---------- 시작 화면 ---------- */
+app.innerHTML=`
+<h1>판단의 신</h1>
+<button onclick="startSurvey()">시작하기</button>
+`;
+</script>
+
+</body>
+</html>
